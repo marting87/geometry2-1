@@ -46,10 +46,11 @@ void seed_rand()
 {
   //Seed random number generator with current time.
   srand((unsigned) time(0));
-};
+}
 
 void generate_rand_vectors(double scale, uint64_t runs, std::vector<double>& xvalues, std::vector<double>& yvalues, std::vector<double>&zvalues)
 {
+  (void)scale;
   seed_rand();
   for ( uint64_t i = 0; i < runs ; i++ )
   {
@@ -668,8 +669,6 @@ TEST(BufferCore_lookupTransform, i_configuration)
   {
     tf2::BufferCore mBC;
     setupTree(mBC, "i", eval_time, interpolation_space);
-
-    tf2::TimePoint eval_time_time_point = tf2_ros::fromMsg(eval_time);
 
     geometry_msgs::msg::TransformStamped outpose = mBC.lookupTransform(source_frame, target_frame, tf2_ros::fromMsg(eval_time));
 
@@ -1754,7 +1753,7 @@ TEST(BufferCore_lookupTransform, invalid_arguments)
   EXPECT_THROW(mBC.lookupTransform("/b", "a", eval_time_time_point), tf2::InvalidArgumentException);
   EXPECT_THROW(mBC.lookupTransform("b", "/a", eval_time_time_point), tf2::InvalidArgumentException);
 
-};
+}
 
 TEST(BufferCore_canTransform, invalid_arguments)
 {
@@ -1776,7 +1775,7 @@ TEST(BufferCore_canTransform, invalid_arguments)
   EXPECT_FALSE(mBC.canTransform("/b", "a", eval_time_time_point));
   EXPECT_FALSE(mBC.canTransform("b", "/a", eval_time_time_point));
 
-};
+}
 
 struct TransformableHelper
 {
@@ -1790,6 +1789,11 @@ struct TransformableHelper
                 tf2::TimePoint time,
                 tf2::TransformableResult result)
   {
+    (void)request_handle;
+    (void)target_frame;
+    (void)source_frame;
+    (void)time;
+    (void)result;
     called = true;
   }
 
