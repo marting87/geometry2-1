@@ -41,9 +41,19 @@ install(DIRECTORY include/${PROJECT_NAME}/
 
 # Tests
 if(BUILD_TESTING)
-  # TODO(tfoote) enable linters
-  # find_package(ament_lint_auto REQUIRED)
-  # ament_lint_auto_find_test_dependencies()
+  set(ament_cmake_cppcheck_LANGUAGE c++)
+  set(ament_cmake_cppcheck_ADDITIONAL_EXCLUDE "include/tf2/LinearMath/*")
+  set(ament_cmake_cpplint_ADDITIONAL_EXCLUDE LinearMath)
+  set(ament_cmake_uncrustify_ADDITIONAL_ARGS LANGUAGE C++ --exclude LinearMath)
+
+  find_package(ament_lint_auto REQUIRED)
+
+  list(APPEND AMENT_LINT_AUTO_EXCLUDE
+    # TODO(anyone): review include/tf2/LinearMath copyright
+    ament_cmake_copyright
+  )
+  ament_lint_auto_find_test_dependencies()
+
   find_package(ament_cmake_gtest)
 
   ament_add_gtest(test_cache_unittest test/cache_unittest.cpp)
@@ -75,7 +85,7 @@ if(BUILD_TESTING)
   endif()
 
   ament_add_gtest(test_time test/test_time.cpp)
-  if (TARGET test_time)
+  if(TARGET test_time)
     target_link_libraries(test_time tf2)
   endif()
 
