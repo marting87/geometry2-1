@@ -202,21 +202,6 @@ Buffer::waitForTransform(const std::string& target_frame, const std::string& sou
   auto promise = std::make_shared<std::promise<geometry_msgs::msg::TransformStamped>>();
   TransformStampedFuture future(promise->get_future());
 
-  // Remove old transformable callbacks
-  for(int i = callback_handles_.size() - 1; i >= 0; i--){
-    bool found = false;
-    for (auto& h : timer_to_request_map_){
-      if (h.second.cb_handle == callback_handles_[i]){
-          found = true;
-          break;
-      }
-    }
-    if(!found){
-      removeTransformableCallback(callback_handles_[i]);
-      callback_handles_.erase(callback_handles_.begin()+i);
-    }
-  }
-
   auto cb_handle = addTransformableCallback([this, promise, callback, future](
     tf2::TransformableRequestHandle request_handle, const std::string& target_frame,
     const std::string& source_frame, tf2::TimePoint time, tf2::TransformableResult result)
@@ -228,7 +213,7 @@ Buffer::waitForTransform(const std::string& target_frame, const std::string& sou
         std::lock_guard<std::mutex> lock(this->timer_to_request_map_mutex_);
         // Check if a timeout already occurred
         for (auto it = timer_to_request_map_.begin(); it != timer_to_request_map_.end(); ++it) {
-          if (request_handle == it->second.handle) {
+          if (request_handle == it->second) {
             // The request handle was found, so a timeout has not occurred
             this->timer_interface_->remove(it->first);
             this->timer_to_request_map_.erase(it->first);
@@ -269,8 +254,7 @@ Buffer::waitForTransform(const std::string& target_frame, const std::string& sou
       std::bind(&Buffer::timerCallback, this, std::placeholders::_1, promise, future, callback));
 
     // Save association between timer and request handle
-    callback_handles_.push_back(cb_handle);
-    timer_to_request_map_[timer_handle] = {cb_handle, handle};
+    timer_to_request_map_[timer_handle] = handle;
   }
   return future;
 }
@@ -288,7 +272,7 @@ Buffer::timerCallback(const TimerHandle & timer_handle,
     auto timer_and_request_it = timer_to_request_map_.find(timer_handle);
     timer_is_valid = (timer_to_request_map_.end() != timer_and_request_it);
     if (timer_is_valid) {
-      request_handle = timer_and_request_it->second.handle;
+      request_handle = timer_and_request_it->second;
     }
     timer_to_request_map_.erase(timer_handle);
     timer_interface_->remove(timer_handle);
