@@ -213,7 +213,7 @@ Buffer::waitForTransform(const std::string& target_frame, const std::string& sou
         std::lock_guard<std::mutex> lock(this->timer_to_request_map_mutex_);
         // Check if a timeout already occurred
         for (auto it = timer_to_request_map_.begin(); it != timer_to_request_map_.end(); ++it) {
-          if (request_handle == it->second) {
+          if (request_handle == it->second.request_handle) {
             // The request handle was found, so a timeout has not occurred
             this->timer_interface_->remove(it->first);
             this->timer_to_request_map_.erase(it->first);
@@ -255,8 +255,8 @@ Buffer::waitForTransform(const std::string& target_frame, const std::string& sou
       timeout,
       std::bind(&Buffer::timerCallback, this, std::placeholders::_1, promise, future, callback));
 
-    // Save association between timer and request handle
-    timer_to_request_map_[timer_handle] = handle;
+    // Save association between timer and request/callback handle
+    timer_to_request_map_[timer_handle] = {handle, cb_handle};
   }
   return future;
 }
@@ -268,20 +268,20 @@ Buffer::timerCallback(const TimerHandle & timer_handle,
                       TransformReadyCallback callback)
 {
   bool timer_is_valid = false;
-  tf2::TransformableRequestHandle request_handle = 0u;
+  tf2::TransformableCallbackHandle callback_handle = 0u;
   {
     std::lock_guard<std::mutex> lock(timer_to_request_map_mutex_);
     auto timer_and_request_it = timer_to_request_map_.find(timer_handle);
     timer_is_valid = (timer_to_request_map_.end() != timer_and_request_it);
     if (timer_is_valid) {
-      request_handle = timer_and_request_it->second;
+      callback_handle = timer_and_request_it->second.callback_handle;
     }
     timer_to_request_map_.erase(timer_handle);
     timer_interface_->remove(timer_handle);
   }
 
   if (timer_is_valid) {
-    cancelTransformableRequest(request_handle);
+    removeTransformableCallback(callback_handle);
     promise->set_exception(
       std::make_exception_ptr<tf2::TimeoutException>(std::string("Timed out waiting for transform")));
     callback(future);
